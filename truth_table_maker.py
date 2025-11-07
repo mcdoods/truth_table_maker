@@ -1,12 +1,24 @@
+precedence = {
+    '¬': 3,
+    '.': 2,
+    '+': 1
+}
+
+def main():
+    expr = input("Enter expression: ").strip().upper()
+    variables = get_variables(expr)
+    rows = generate_combinations(expr, variables)
+    rows = evaluate_expression(expr, variables, rows)
+    print_table(variables, rows)
+
 def get_variables(expr):
     variables = []
     for ch in expr:
         if 'A' <= ch <= 'Z' and ch not in variables:
             variables.append(ch)
-        
     variables.sort()
     return variables
-    
+
 def generate_combinations(expr, variables):
     rows = []
     n = len(variables)
@@ -17,32 +29,73 @@ def generate_combinations(expr, variables):
         rows.append(combo)
     return rows
 
+def tokenize(expr):
+    tokens = []
+    i = 0
+    while i < len(expr):
+        ch = expr[i]
+        if 'A' <= ch <= 'Z':
+            tokens.append(ch)
+        elif ch in ('.', '+', '¬', '(', ')'):
+            tokens.append(ch)
+        i += 1
+    return tokens
+
+def to_postfix(tokens):
+    output = []
+    stack = []
+    for token in tokens:
+        if token.isalpha():
+            output.append(token)
+        elif token == '¬':
+            stack.append(token)
+        elif token in ('.', '+'):
+            while stack and stack[-1] != '(' and precedence[stack[-1]] >= precedence[token]:
+                output.append(stack.pop())
+            stack.append(token)
+        elif token == '(':
+            stack.append(token)
+        elif token == ')':
+            while stack and stack[-1] != '(':
+                output.append(stack.pop())
+            stack.pop()
+    while stack:
+        output.append(stack.pop())
+    return output
+
+def evaluate_postfix(postfix, values):
+    stack = []
+    for token in postfix:
+        if token.isalpha():
+            stack.append(values[token])
+        elif token == '¬':
+            a = stack.pop()
+            stack.append(1 - a)
+        elif token == '.':
+            b = stack.pop()
+            a = stack.pop()
+            stack.append(a & b)
+        elif token == '+':
+            b = stack.pop()
+            a = stack.pop()
+            stack.append(a | b)
+    return stack[0]
+
 def evaluate_expression(expr, variables, rows):
-    safe_expr = expr.replace(".", " and ").replace("+", " or ").replace("¬", " not ")
-    
+    tokens = tokenize(expr)
+    postfix = to_postfix(tokens)
+
+    results = []
     for combo in rows:
-        env = {variables[i]: combo[i] for i in range(len(variables))}
-        eval_expr = safe_expr
-        for var, val in env.items():
-            eval_expr = eval_expr.replace(var, str(bool(val)))
-        result = eval(eval_expr)
-        combo.append(int(result))
-        
-    return rows
+        values = {variables[i]: combo[i] for i in range(len(variables))}
+        result = evaluate_postfix(postfix, values)
+        results.append(combo + [result])
+    return results
 
 def print_table(variables, rows):
     print(" | ".join(variables + ["F"]))
-    print("-" * (4 * len(variables) + 5))
-    
+    print("-" * (4 * len(variables) + 3))
     for row in rows:
         print(" | ".join(str(x) for x in row))
 
-def main():
-    print("¬ = NOT, . = AND, + = OR")
-    expr = input("Enter expression: ").strip().upper()
-    
-    variables = get_variables(expr)
-    rows = evaluate_expression(expr, variables, generate_combinations(expr, variables))
-    print_table(variables, rows)
-    
 main()
