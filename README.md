@@ -6,7 +6,7 @@ A barebones Python command-line tool that generates truth tables for Boolean exp
 - Supports operator precedence:
   - ¬ (NOT)
   - . (AND)
-  - + (OR)
+  - \+ (OR)
 - Readable ASCII table output
 
 ## Usage
